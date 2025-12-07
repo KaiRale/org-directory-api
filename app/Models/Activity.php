@@ -42,8 +42,6 @@ class Activity extends Model
 
     public static function findByTitleWithChildren(string $title): Collection
     {
-        return static::with('children')
-            ->where('title', 'like', "%{$title}%")
-            ->get();
+        return static::where('title', 'like', "%{$title}%")->get();
     }
 }

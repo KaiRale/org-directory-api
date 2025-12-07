@@ -31,7 +31,7 @@ class OrganizationController extends Controller
         $request->validate([
             'lat' => 'required|numeric|min:-90|max:90',
             'lng' => 'required|numeric|min:-180|max:180',
-            'radius' => 'nullable|numeric|min:-90|max:90',
+            'radius' => 'nullable|numeric|min:1|max:10000', // from 1m to 10km
         ]);
 
         $lat = $request->query('lat');
@@ -124,7 +124,7 @@ class OrganizationController extends Controller
             return response()->json(['message' => 'No activities found.']);
         }
 
-        $activityIds = Activity::getSelfAndDescendantIdsForActivities($activities);
+        $activityIds = $activities->pluck('id');
 
         $organizations = Organization::with([
             'building',
