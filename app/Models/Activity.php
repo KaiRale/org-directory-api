@@ -33,13 +33,6 @@ class Activity extends Model
         return $this->children()->pluck('id')->push($this->id);
     }
 
-    public static function getSelfAndDescendantIdsForActivities(Collection $activities): Collection
-    {
-        return $activities->flatMap(function ($activity) {
-            return $activity->getSelfAndDescendantIds();
-        })->unique();
-    }
-
     public static function findByTitleWithChildren(string $title): Collection
     {
         return static::where('title', 'like', "%{$title}%")->get();
