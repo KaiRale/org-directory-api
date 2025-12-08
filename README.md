@@ -38,7 +38,7 @@ cписок зданий (nearby)
 ограничить уровень вложенности деятельностей 3 уровням
 
 ## Установка и тестирование
-- Приложение развернуто через Herd
+- Приложение развернуто через Herd (необходимо переименовать [.env.testing](.env.testing) в .env)
 - Необходимо выполнить миграции(php artisan migrate:fresh) и создать тестовые данные (php artisan db:seed)
 - Импортировать в postman файлы ([orgDirectoryApi.postman_collection.json](orgDirectoryApi.postman_collection.json), [orgDirectoryApi.postman_environment.json](orgDirectoryApi.postman_environment.json)). 
 - Протестировать запросы в postman
