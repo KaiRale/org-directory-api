@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use Illuminate\Support\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -28,20 +27,4 @@ class Activity extends Model
         return $this->belongsToMany(Organization::class, 'organization_activities');
     }
 
-    public function getSelfAndDescendantIds(): Collection
-    {
-        return $this->children()->pluck('id')->push($this->id);
-    }
-
-    public static function getSelfAndDescendantIdsForActivities(Collection $activities): Collection
-    {
-        return $activities->flatMap(function ($activity) {
-            return $activity->getSelfAndDescendantIds();
-        })->unique();
-    }
-
-    public static function findByTitleWithChildren(string $title): Collection
-    {
-        return static::where('title', 'like', "%{$title}%")->get();
-    }
 }

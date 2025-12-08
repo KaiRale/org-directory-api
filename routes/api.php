@@ -8,7 +8,7 @@ Route::middleware('api.auth')->prefix('organizations')->group(function () {
     Route::get('/search', [OrganizationController::class, 'search']);
     Route::get('/activity/search', [OrganizationController::class, 'byActivityTitle']);
 
-    Route::get('/building/{buildingId}', [OrganizationController::class, 'byBuilding']);
-    Route::get('/activity/{activityId}', [OrganizationController::class, 'byActivity']);
-    Route::get('/{id}', [OrganizationController::class, 'show']);
+    Route::get('/building/{id}', [OrganizationController::class, 'byBuilding'])->where('id', '[0-9]+');;
+    Route::get('/activity/{id}', [OrganizationController::class, 'byActivity'])->where('id', '[0-9]+');;
+    Route::get('/{id}', [OrganizationController::class, 'show'])->where('id', '[0-9]+');;
 });

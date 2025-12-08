@@ -2,140 +2,69 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Activity;
-use App\Models\Building;
-use App\Models\Organization;
+use App\DTOs\CoordinatesDTO;
+use App\Http\Requests\IdRequest;
+use App\Http\Requests\NearbyOrganizationsRequest;
+use App\Http\Requests\TitleRequest;
+use App\Http\Resources\OrganizationResource;
+use App\Services\OrganizationService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 class OrganizationController extends Controller
 {
+    public function __construct(
+        private readonly OrganizationService $service
+    ) {}
+
     /**
      * Display the specified resource.
      */
-    public function show(string $id): JsonResponse
+    public function show(IdRequest $request, string $id): JsonResponse
     {
-        $organization = Organization::with(
-            [
-                'building',
-                'phones',
-                'activities'
-            ]
-        )->findOrFail($id);
+        $organization = $this->service->getOrganization($id);
 
-        return response()->json($organization);
+        return new JsonResponse(new OrganizationResource($organization));
     }
 
-    public function nearby(Request $request): JsonResponse
+    public function nearby(NearbyOrganizationsRequest $request): JsonResponse
     {
-        $request->validate([
-            'lat' => 'required|numeric|min:-90|max:90',
-            'lng' => 'required|numeric|min:-180|max:180',
-            'radius' => 'nullable|numeric|min:1|max:10000', // from 1m to 10km
-        ]);
+        $coordinates = new CoordinatesDTO(
+            $request->get('lat'),
+            $request->get('lng'),
+            $request->get('radius') ?? 10
+        );
 
-        $lat = $request->query('lat');
-        $lng = $request->query('lng');
-        $radius = $request->query('radius', 10);
+        $organizations = $this->service->getNearby($coordinates);
 
-        $organizations = Organization::with([
-            'building',
-            'phones',
-            'activities'
-        ])
-            ->whereHas('building', function ($query) use ($lat, $lng, $radius) {
-                $query->whereRaw("
-                    ST_Distance_Sphere(
-                        POINT(longitude, latitude),
-                        POINT(?, ?)
-                    ) <= ?
-                ", [$lng, $lat, $radius]);
-            })
-            ->get();
-
-        return response()->json($organizations);
+        return new JsonResponse(OrganizationResource::collection($organizations));
     }
 
-    public function search(Request $request): JsonResponse
+    public function search(TitleRequest $request): JsonResponse
     {
-        $request->validate([
-            'title' => 'required|string|min:3',
-        ]);
+        $title = $request->get('title');
+        $organizations = $this->service->getByOrganisationsTitle($title);
 
-        $title = $request->query('title');
-
-        $organizations = Organization::with([
-            'building',
-            'phones',
-            'activities'
-        ])
-            ->where('title', 'like', '%' . $title . '%')
-            ->get();
-
-        return response()->json($organizations);
+        return new JsonResponse(OrganizationResource::collection($organizations));
     }
 
-    public function byBuilding(string $buildingId): JsonResponse
+    public function byBuilding(IdRequest $request, string $buildingId): JsonResponse
     {
-        Building::findOrFail($buildingId);
+        $organizations = $this->service->getByBuilding($buildingId);
 
-        $organization = Organization::with([
-            'building',
-            'phones',
-            'activities'
-        ])
-            ->where([
-                'building_id' => $buildingId,
-            ])->get();
-
-        return response()->json($organization);
+        return new JsonResponse(OrganizationResource::collection($organizations));
     }
 
-    public function byActivity(string $activityId): JsonResponse
+    public function byActivity(IdRequest $request, string $activityId): JsonResponse
     {
-        $activity = Activity::with('children')->findOrFail($activityId);
-        $activityIds = $activity->getSelfAndDescendantIds();
+        $organizations = $this->service->getByActivity($activityId);
 
-        $organizations = Organization::with([
-            'building',
-            'phones',
-            'activities'
-        ])
-            ->whereHas('activities', function ($query) use ($activityIds) {
-                $query->whereIn('id', $activityIds);
-            })
-            ->get();
-
-        return response()->json($organizations);
-
+        return new JsonResponse(OrganizationResource::collection($organizations));
     }
 
-    public function byActivityTitle(Request $request): JsonResponse
+    public function byActivityTitle(TitleRequest $request): JsonResponse
     {
-        $request->validate([
-            'title' => 'required|string|min:2',
-        ]);
+        $organizations = $this->service->getByActivityTitle($request->get('title'));
 
-        $title = $request->query('title');
-
-        $activities = Activity::findByTitleWithChildren($title);
-
-        if ($activities->isEmpty()) {
-            return response()->json(['message' => 'No activities found.']);
-        }
-
-        $activityIds = $activities->pluck('id');
-
-        $organizations = Organization::with([
-            'building',
-            'phones',
-            'activities'
-        ])
-            ->whereHas('activities', function ($query) use ($activityIds) {
-                $query->whereIn('id', $activityIds);
-            })
-            ->get();
-
-        return response()->json($organizations);
+        return new JsonResponse(OrganizationResource::collection($organizations));
     }
 }
