@@ -36,3 +36,9 @@ cписок зданий (nearby)
 - поиск организации по названию (search)
 
 ограничить уровень вложенности деятельностей 3 уровням
+
+## Установка и тестирование
+- Приложение развернуто через Herd
+- Необходимо выполнить миграции(php artisan migrate:fresh) и создать тестовые данные (php artisan db:seed)
+- Импортировать в postman файлы ([orgDirectoryApi.postman_collection.json](orgDirectoryApi.postman_collection.json), [orgDirectoryApi.postman_environment.json](orgDirectoryApi.postman_environment.json)). 
+- Протестировать запросы в postman
