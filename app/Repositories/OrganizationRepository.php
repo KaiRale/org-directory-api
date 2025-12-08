@@ -2,62 +2,49 @@
 
 namespace App\Repositories;
 
-use App\DTOs\OrganizationFiltersDTO;
 use App\Models\Activity;
+use App\Models\Building;
 use App\Models\Organization;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Collection as IlluminateCollection;
 
 class OrganizationRepository implements OrganizationRepositoryInterface
 {
     private const DEFAULT_RELATIONS = ['building', 'phones', 'activities'];
 
-    public function findById(int $id)
+    public function findById(int $id): ?Organization
     {
         return Organization::with(self::DEFAULT_RELATIONS)->findOrFail($id);
     }
 
-    public function search(OrganizationFiltersDTO $filters): Collection
+    public function findByCoordinates(float $lat, float $lng, float $radius): Collection
+    {
+        return Organization::with(self::DEFAULT_RELATIONS)
+            ->whereHas('building', function ($query) use ($lng, $lat, $radius) {
+                $query->whereRaw("
+                    ST_Distance_Sphere(
+                        POINT(longitude, latitude),
+                        POINT(?, ?)
+                    ) <= ?
+                    ",
+                    [$lng, $lat, $radius]
+                );
+            })
+            ->get();
+    }
+
+    public function findByOrganisationsTitle(string $title): Collection
     {
         $query = Organization::with(self::DEFAULT_RELATIONS);
-
-        if ($filters->title) {
-            $query->where('title', 'like', '%' . $filters->title . '%');
-        }
-
-        if ($filters->buildingId) {
-            $query->where('building_id', $filters->buildingId);
-        }
-
-        if ($filters->activityId) {
-            $query->whereHas('activities', function ($q) use ($filters) {
-                $q->whereIn('id', $this->getActivityIdsWithDescendants($filters->activityId));
-            });
-        }
-
-        if ($filters->activityTitle) {
-            $activityIds = $this->getActivityIdsByTitle($filters->activityTitle);
-            if ($activityIds->isNotEmpty()) {
-                $query->whereHas('activities', function ($q) use ($activityIds) {
-                    $q->whereIn('id', $activityIds);
-                });
-            }
-        }
-
-        if ($filters->coordinates) {
-            $query->whereHas('building', function ($q) use ($filters) {
-                $q->whereRaw("ST_Distance_Sphere(POINT(longitude, latitude), POINT(?, ?)) <= ?", [
-                    $filters->coordinates->longitude,
-                    $filters->coordinates->latitude,
-                    $filters->coordinates->radius // конвертация в метры
-                ]);
-            });
-        }
+        $query->where('title', 'like', '%' . $title . '%');
 
         return $query->get();
     }
 
     public function findByBuildingId(int $buildingId): Collection
     {
+        Building::findOrFail($buildingId);
+
         return Organization::with(self::DEFAULT_RELATIONS)
             ->where('building_id', $buildingId)
             ->get();
@@ -89,40 +76,26 @@ class OrganizationRepository implements OrganizationRepositoryInterface
             ->get();
     }
 
-    public function findByCoordinates(float $lat, float $lng, float $radius): Collection
-    {
-        return Organization::with(self::DEFAULT_RELATIONS)
-            ->whereHas('building', function ($query) use ($lng, $lat, $radius) {
-                $query->whereRaw("ST_Distance_Sphere(POINT(longitude, latitude), POINT(?, ?)) <= ?", [
-                    $lng, $lat, $radius * 1000
-                ]);
-            })
-            ->get();
-    }
-
-    private function getActivityIdsWithDescendants(int $activityId): Collection
-    {
-        $activity = Activity::with('children.children')->findOrFail($activityId);
-        return $this->extractActivityIds($activity);
-    }
-
-    private function getActivityIdsByTitle(string $title): Collection
+    private function getActivityIdsByTitle(string $title): IlluminateCollection
     {
         $activities = Activity::where('title', 'like', "%{$title}%")->get();
 
-        $allIds = collect();
-        foreach ($activities as $activity) {
-            $allIds = $allIds->merge($this->extractActivityIds($activity));
-        }
-
-        return $allIds->unique();
+        return $activities->pluck('id');
     }
 
-    private function extractActivityIds($activity, int $level = 0): Collection
+    // getting the activity and its descendants
+    private function getActivityIdsWithDescendants(int $activityId): IlluminateCollection
+    {
+        $activity = Activity::with('children.children')->findOrFail($activityId);
+
+        return $this->extractActivityIds($activity);
+    }
+
+    private function extractActivityIds($activity, int $level = 0): IlluminateCollection
     {
         $ids = collect([$activity->id]);
 
-        // Ограничение вложенности 3 уровня
+        // the nesting limit is 3 levels
         if ($level < 3 && $activity->children) {
             foreach ($activity->children as $child) {
                 $ids = $ids->merge($this->extractActivityIds($child, $level + 1));

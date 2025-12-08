@@ -2,13 +2,13 @@
 
 namespace App\Repositories;
 
-use App\DTOs\OrganizationFiltersDTO;
+use App\Models\Organization;
 use Illuminate\Database\Eloquent\Collection;
 
 interface OrganizationRepositoryInterface
 {
-    public function findById(int $id);
-    public function search(OrganizationFiltersDTO $filters): Collection;
+    public function findById(int $id): ?Organization;
+    public function findByOrganisationsTitle(string $title): Collection;
     public function findByBuildingId(int $buildingId): Collection;
     public function findByActivityId(int $activityId): Collection;
     public function findByActivityTitle(string $title): Collection;

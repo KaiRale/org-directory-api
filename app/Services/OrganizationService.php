@@ -3,41 +3,42 @@
 namespace App\Services;
 
 use App\DTOs\CoordinatesDTO;
-use App\DTOs\OrganizationFiltersDTO;
+use App\Models\Organization;
 use App\Repositories\OrganizationRepositoryInterface;
+use Illuminate\Database\Eloquent\Collection;
 
-class OrganizationService
+readonly class OrganizationService
 {
     public function __construct(
-        private readonly OrganizationRepositoryInterface $repository
+        private OrganizationRepositoryInterface $repository
     ) {}
 
-    public function getOrganization(int $id)
+    public function getOrganization(int $id): ?Organization
     {
         return $this->repository->findById($id);
     }
 
-    public function searchOrganizations(OrganizationFiltersDTO $filters)
+    public function getByOrganisationsTitle(string $title): Collection
     {
-        return $this->repository->search($filters);
+        return $this->repository->findByOrganisationsTitle($title);
     }
 
-    public function getByBuilding(int $buildingId)
+    public function getByBuilding(int $buildingId): Collection
     {
         return $this->repository->findByBuildingId($buildingId);
     }
 
-    public function getByActivity(int $activityId)
+    public function getByActivity(int $activityId): Collection
     {
         return $this->repository->findByActivityId($activityId);
     }
 
-    public function getByActivityTitle(string $title)
+    public function getByActivityTitle(string $title): Collection
     {
         return $this->repository->findByActivityTitle($title);
     }
 
-    public function getNearby(CoordinatesDTO $coordinates)
+    public function getNearby(CoordinatesDTO $coordinates): Collection
     {
         return $this->repository->findByCoordinates(
             $coordinates->latitude,

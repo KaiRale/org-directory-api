@@ -6,7 +6,7 @@ use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
-class NearbyOrganizationsRequest extends FormRequest
+class IdRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -16,10 +16,13 @@ class NearbyOrganizationsRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'lat' => 'required|numeric|min:-90|max:90',
-            'lng' => 'required|numeric|min:-180|max:180',
-            'radius' => 'nullable|numeric|min:10|max:10000', // form 1m to 10 km
+            'id' => 'required|integer|min:1',
         ];
+    }
+
+    public function validationData()
+    {
+        return array_merge($this->route()->parameters(), $this->all());
     }
 
     protected function failedValidation(Validator $validator)
